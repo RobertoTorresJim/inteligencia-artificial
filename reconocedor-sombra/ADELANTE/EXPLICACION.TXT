@@ -1,0 +1,13 @@
+
+
+1. Para compilar el programa que reconoce sombras en movimiento, solo hay 	que lanzar el comando:
+
+$ make
+
+2. Para probar su modelo, solo hay que modificar la funcion load_model () en el archivo busca-sombra.c. Observe que esta funcion ya tiene datos. Estos corresponden con el modelo que yo encontre. Ustedes deben proponer sus propios datos y la posibilidad que mis datos coincidan con los de su modelo es muy baja.
+
+3. Para ejecutar:
+
+$ ./sombras pic1.jpg pic2.jpg
+
+4. El resultado se encontrara en la imagen 'pic.pnm'.

@@ -220,13 +220,13 @@ void load_model (GMM *signx, GMM *brillo, GMM *amplif, GMM *atenua, GMM *perdida
   
   ganancia->numcomp =2;
 
-  ganancia->pi[0]= 0.6249;
-  ganancia->mu[0]= 0.25;
-  ganancia->sigma[0]= 0.1141;
+  ganancia->pi[0]= 0.0;//0.6249;
+  ganancia->mu[0]= 0.0;//0.25;
+  ganancia->sigma[0]= 0.0;//0.1141;
 
-  ganancia->pi[1]= 0.3751;
-  ganancia->mu[1]= 0.5363;
-  ganancia->sigma[1]= 0.2567;
+  ganancia->pi[1]= 0.0;//0.3751;
+  ganancia->mu[1]= 0.0;//5363;
+  ganancia->sigma[1]= 0.0;//2567;
 
   def_interval (ganancia, INTERVAL);
 

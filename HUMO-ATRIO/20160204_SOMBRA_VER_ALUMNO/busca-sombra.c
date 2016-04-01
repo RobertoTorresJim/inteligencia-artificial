@@ -12,7 +12,7 @@
 
 typedef struct gmm {
 int numcomp; // numero de componentes normales
-double pi[2]; // peso 
+double pi[2]; // peso
 double mu[2]; // media
 double sigma[2]; // desviacion estandard
 
@@ -33,6 +33,7 @@ void def_interval (GMM *gmm, double interval);
 void print_interval (GMM gmm, char *t);
 int conform (GMM gmm, double ind);
 void load_model (GMM *signx, GMM *brillo, GMM *amplif, GMM *atenua, GMM *perdida, GMM *ganancia);
+int erosion(PPM picbin, int i);
 
 
 void put_mark (char *file, int blk, int action);
@@ -49,9 +50,9 @@ main (int argc, char *argv [])
   int m,n;
 
  // resultados de la verificacion de conformidad de un dato puntual con el modelo
-  int r_brillo, r_atenu, r_ampli, r_igual, r_signx, r_perdida, r_ganancia; 
+  int r_brillo, r_atenu, r_ampli, r_igual, r_signx, r_perdida, r_ganancia;
 
-  int i, j, n_mcu; 
+  int i, j, n_mcu;
 // MCU: Minimum Coding Unit. Un MCU contiene bloques de luminancia y de color
   DCT_AXIS2100 *MCUvect1, *MCUvect2;
   short *blkp1, *blkp2; // apuntador aun bloque de coeficientes DCT
@@ -64,11 +65,8 @@ main (int argc, char *argv [])
     printf ("se requiere: %s <pic 1>.jpg <pic 2>.jpg\n", argv [0]);
     exit (1);
   }
-
-
 // carga los datos de los modelos
   load_model(&gmm_signx, &gmm_brillo, &gmm_amplif, &gmm_atenua, &gmm_perdida, &gmm_ganancia);
-
 // Descomprime una imagen JPEG y entrega un vector de MCU, los cuales contienen
 // los bloques de coeficientes DCT.
   MCUvect1 = get_MCU_from_JPEG (argv [1], &n_mcu );
@@ -83,8 +81,7 @@ main (int argc, char *argv [])
 
    memset(picbin.picture,0xff,picbin.horizontal*picbin.vertical);
 
-
-  for (i = 0; i < n_mcu;i++) { 
+  for (i = 0; i < n_mcu; i++) {
 
 // extre del vector de MCUs el i-esimo bloque de luminancia Y.
     blkp1 = get_Y_block (MCUvect1, i);
@@ -114,53 +111,118 @@ main (int argc, char *argv [])
 // que hemos encontrado un bloque ligado a la presencia de una sombra
 // en movimiento.
 
-    if (r_brillo && r_atenu && r_ampli && r_signx && r_perdida && r_ganancia){
-      put_mark (argv [2], i, 0); // marca el i-esimo bloque de la imagen 
-                                 // contenida en el archivo 'argv [2]'
-
-	 picbin.picture[i] =0x00;
-	 }
-
-  }
+    if((indi_perdida>indi_ganancia)){
+       if(indi_perdida<indi_brillo){
+            if (r_brillo && r_atenu && r_ampli && r_signx/* && r_perdida && r_ganancia*/){
+            picbin.picture[i] =0x00; //creacion de la pic bianria
+            if(erosion(picbin,i)){
+              printf("%d",erosion(picbin,i));
+              put_mark (argv [2], i, 0); // marca el i-esimo bloque de la imagen
+          }
+        }                                  // contenida en el archivo 'argv [2]'
+      }
+    }
+  }//termina for
   put_mark (argv [2], i, LASTMARK); // indica que el la imagen marcada debe
                                     // ser escrita en un archivo llamado
                                     // 'pic.pnm'
-
 	save_picture(picbin);
-}
+}// termina main
 
+int erosion(PPM picbin, int i){
+  int bandera = 0;
+  int validaIzq = 0;
+  int validaDer = 0;
+  int j, k;
+    if(picbin.picture[i] == 0x00){
+      for (j = 0; j < 32160;){
+
+        if(i == j){
+          validaIzq = 1;
+        }// valida los bordes
+        j = j+240;
+      }
+        for(k = 0; k < 32399;){
+
+          if(i == k){
+            validaDer = 1;
+          }
+          k = k+240;
+        }
+      if(i-1 > 0 && validaIzq == 0){
+        if(picbin.picture[i-1] == 0x00){
+          bandera = bandera + 1;
+        }
+      }
+      if(i-241 > 0 && validaIzq == 0){
+        if(picbin.picture[i-241] == 0x00){
+          bandera = bandera + 1;
+        }
+      }
+      if(i-240 > 0){
+        if(picbin.picture[i-240] == 0){
+          bandera = bandera + 1;
+        }
+      }
+      if(i-239 > 0 && validaDer == 0){
+        if(picbin.picture[i-239] == 0x00){
+          bandera = bandera + 1;
+        }
+      }
+      if(i+1 < 32400 && validaDer == 0){
+        if(picbin.picture[i+1] == 0x00){
+          bandera = bandera + 1;
+        }
+      }
+      if(i+239 < 32400 && validaIzq == 0){
+        if(picbin.picture[i+239] == 0x00){
+          bandera = bandera + 1;
+        }
+      }
+      if(i+240 < 32400){
+        if(picbin.picture[i+240] == 0x00){
+          bandera = bandera + 1;
+        }
+      }
+      if(i+241 < 32400 && validaDer == 0){
+        if(picbin.picture[i+241] == 0x00){
+          bandera = bandera + 1;
+        }
+      }
+    validaDer = 0;
+    validaIzq = 0;
+  }
+  if (bandera > 3)
+    return 1;
+  else return 0;
+}
 
 void load_model (GMM *signx, GMM *brillo, GMM *amplif, GMM *atenua, GMM *perdida, GMM *ganancia)
 {
-
 ///// modelo para cambios de signo ////////////////////
-
   signx->numcomp = 2;
 
   signx->pi[0]= 0.3524;
   signx->mu[0]= 1.0;
   signx->sigma[0]= 0.2781;
 
-  signx->pi[1]= 0.6476; 
+  signx->pi[1]= 0.6476;
   signx->mu[1]= 1.809;
   signx->sigma[1]= 0.7004;
 
   def_interval (signx, INTERVAL);
-
 ///// modelo para cambios de brillo ////////////////////
-
   brillo->numcomp = 2;
 
   brillo->pi[0]= 0.7251;
   brillo->mu[0]= -140.0;
   brillo->sigma[0]= 85.99;
 
-  brillo->pi[1]= 0.2749; 
+  brillo->pi[1]= 0.2749;
   brillo->mu[1]= 120.0;
   brillo->sigma[1]= 76.39;
 
   def_interval (brillo, INTERVAL);
-
 ///// modelo indice de coeficientes iguales /////////////
 /*
   igual->numcomp = 2;
@@ -204,7 +266,7 @@ void load_model (GMM *signx, GMM *brillo, GMM *amplif, GMM *atenua, GMM *perdida
   def_interval (atenua, INTERVAL);
 
 //// modelo indice de perdida ////////////////
-  
+
   perdida->numcomp = 2;
 
   perdida->pi[0]= 0.6249;
@@ -218,7 +280,7 @@ void load_model (GMM *signx, GMM *brillo, GMM *amplif, GMM *atenua, GMM *perdida
   def_interval (perdida, INTERVAL);
 
 //// modelo indice de ganancia ////////////
-  
+
   ganancia->numcomp =2;
 
   ganancia->pi[0]= 0.91121;
@@ -233,12 +295,11 @@ void load_model (GMM *signx, GMM *brillo, GMM *amplif, GMM *atenua, GMM *perdida
 
 }
 
-
 int conform (GMM gmm, double ind)
 {
   int i, res;
- 
-  res = 0; 
+
+  res = 0;
   for (i = 0;i < gmm.numcomp;i++)
     if (gmm.LimInf[i] <= ind && ind <= gmm.LimSup [i])
       res++;
@@ -391,5 +452,3 @@ int sign (int data)
   else
     return CERO;
 }
-
-
